@@ -1,4 +1,4 @@
-package com.nabgha.catalogueservice;
+package com.nabgha.catalogue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

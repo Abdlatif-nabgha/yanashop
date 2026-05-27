@@ -1,4 +1,4 @@
-package com.nabgha.catalogueservice;
+package com.nabgha.catalogue;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

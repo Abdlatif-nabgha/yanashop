@@ -1,0 +1,38 @@
+services:
+  catalogue-db:
+    image: postgres:16-alpine
+    container_name: yanashop-catalogue-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: catalogue_db
+      POSTGRES_USER: nabgha
+      POSTGRES_PASSWORD: 44026676
+    ports:
+      - "5432:5432"
+    volumes:
+      - catalogue-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nabgha -d catalogue_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  catalogue-app:
+    build:
+      context: .
+      dockerfile: catalogue-service/Dockerfile
+    container_name: yanashop-catalogue-app
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://catalogue-db:5432/catalogue_db
+      - SPRING_DATASOURCE_USERNAME=nabgha
+      - SPRING_DATASOURCE_PASSWORD=44026676
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=validate
+    depends_on:
+      catalogue-db:
+        condition: service_healthy
+
+volumes:
+  catalogue-db-data:
