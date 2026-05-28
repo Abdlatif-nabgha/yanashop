@@ -1,0 +1,29 @@
+# Docker image used to executed jobs
+image: maven:3.9.6-eclipse-temurin-21
+
+# pipelines will execute with this order
+stages:
+  - build
+  - test
+
+# cash maven dependencies within jobs (ovoid reinstalling them)
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+cache:
+  paths:
+    - .m2/repository
+
+# ===== STAGE: BUILD =====
+build-job:
+  stage: build
+  script:
+    - echo "Compiling the project"
+    - mvn clean compile -B
+
+# ===== STAGE: TEST =====
+test-job:
+  stage: test
+  script:
+    - echo "Running tests..."
+    - mvn test -B
