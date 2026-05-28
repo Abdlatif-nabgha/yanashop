@@ -89,6 +89,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- Required for @ServiceConnection (Spring Boot 3.1+) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <!-- ============================================ -->
