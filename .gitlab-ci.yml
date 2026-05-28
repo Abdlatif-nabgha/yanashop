@@ -1,10 +1,9 @@
-# Docker image used to executed jobs
 image: maven:3.9.6-eclipse-temurin-21
 
-# pipelines will execute with this order
 stages:
   - build
   - test
+  - integration-test
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
@@ -13,16 +12,34 @@ cache:
   paths:
     - .m2/repository
 
-# ===== STAGE: BUILD =====
+# ===== BUILD =====
 build-job:
   stage: build
   script:
-    - echo "Compiling the project"
+    - echo "Compiling..."
     - mvn clean compile -B
 
-# ===== STAGE: TEST =====
-test-job:
+# ===== UNIT TESTS (no Docker needed) =====
+unit-test-job:
   stage: test
   script:
-    - echo "Running tests..."
+    - echo "Running unit tests..."
     - mvn test -B
+
+# ===== INTEGRATION TESTS (needs Docker for Testcontainers) =====
+#integration-test-job:
+#  stage: integration-test
+#  image: docker:27-cli
+#  services:
+#    - docker:27-dind
+#  variables:
+#    DOCKER_HOST: "tcp://docker:2376"
+#    DOCKER_TLS_CERTDIR: "/certs"
+#    DOCKER_TLS_VERIFY: "1"
+#    DOCKER_CERT_PATH: "/certs/client"
+#    TESTCONTAINERS_HOST_OVERRIDE: "docker"
+#  before_script:
+#    - apk add --no-cache maven openjdk21
+#  script:
+#    - echo "Running integration tests with Testcontainers..."
+#    - mvn verify -B -DskipUnitTests

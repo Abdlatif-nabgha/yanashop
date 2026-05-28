@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 
 @SpringBootTest
-class CatalogueServiceApplicationTests extends AbstractIntegrationTest {
+class CatalogueServiceApplicationIT extends AbstractIntegrationTest {
 
     @Test
     void contextLoads() {
