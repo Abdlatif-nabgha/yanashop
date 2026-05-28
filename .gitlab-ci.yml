@@ -6,7 +6,6 @@ stages:
   - build
   - test
 
-# cash maven dependencies within jobs (ovoid re-installing them)
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
 
