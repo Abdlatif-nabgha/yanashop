@@ -33,3 +33,4 @@ logs/
 # Docker volumes
 docker-volumes/
 postgres-data/
+.claude

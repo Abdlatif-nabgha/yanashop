@@ -3,43 +3,38 @@ image: maven:3.9.6-eclipse-temurin-21
 stages:
   - build
   - test
-  - integration-test
+  - quality
 
 variables:
   MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
 
 cache:
   paths:
     - .m2/repository
+    - .sonar/cache
 
 # ===== BUILD =====
 build-job:
   stage: build
   script:
-    - echo "Compiling..."
+    - echo "Compiling the project..."
     - mvn clean compile -B
 
-# ===== UNIT TESTS (no Docker needed) =====
+# ===== UNIT TESTS =====
 unit-test-job:
   stage: test
   script:
     - echo "Running unit tests..."
     - mvn test -B
 
-# ===== INTEGRATION TESTS (needs Docker for Testcontainers) =====
-#integration-test-job:
-#  stage: integration-test
-#  image: docker:27-cli
-#  services:
-#    - docker:27-dind
-#  variables:
-#    DOCKER_HOST: "tcp://docker:2376"
-#    DOCKER_TLS_CERTDIR: "/certs"
-#    DOCKER_TLS_VERIFY: "1"
-#    DOCKER_CERT_PATH: "/certs/client"
-#    TESTCONTAINERS_HOST_OVERRIDE: "docker"
-#  before_script:
-#    - apk add --no-cache maven openjdk21
-#  script:
-#    - echo "Running integration tests with Testcontainers..."
-#    - mvn verify -B -DskipUnitTests
+# ===== SONARCLOUD =====
+sonarcloud-check:
+  stage: quality
+  script:
+    - echo "Running SonarCloud analysis..."
+    - mvn verify sonar:sonar -B -DskipTests -DskipITs
+  only:
+    - main
+    - merge_requests

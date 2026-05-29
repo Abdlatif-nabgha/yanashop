@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catalogue-service-config
+  namespace: yanashop
+  labels:
+    app: catalogue-service
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres.yanashop.svc.cluster.local:5432/catalogue_db
+  SPRING_DATASOURCE_USERNAME: nabgha
+  SERVER_PORT: "8081"
