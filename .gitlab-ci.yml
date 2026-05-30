@@ -52,6 +52,7 @@ package-jar:
     expire_in: 1 hour
   only:
     - main
+
 # ===== PUBLISH: build Docker image + push to ECR =====
 publish-image:
   stage: publish
@@ -64,10 +65,7 @@ publish-image:
     DOCKER_CERT_PATH: "/certs/client"
     DOCKER_TLS_VERIFY: "1"
   before_script:
-    - apk add --no-cache curl unzip
-    - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    - unzip -q awscliv2.zip
-    - ./aws/install
+    - apk add --no-cache aws-cli
     - aws --version
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
@@ -87,10 +85,7 @@ deploy-eks:
   stage: deploy
   image: alpine:3.20
   before_script:
-    - apk add --no-cache curl unzip
-    - curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-    - unzip -q awscliv2.zip
-    - ./aws/install
+    - apk add --no-cache aws-cli curl
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - aws eks update-kubeconfig --region $AWS_REGION --name yanashop-eks
