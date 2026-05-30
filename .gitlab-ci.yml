@@ -20,19 +20,16 @@ cache:
     - .m2/repository
     - .sonar/cache
 
-# ===== BUILD =====
 build-job:
   stage: build
   script:
     - mvn clean compile -B
 
-# ===== UNIT TESTS =====
 unit-test-job:
   stage: test
   script:
     - mvn test -B
 
-# ===== SONARCLOUD =====
 sonarcloud-check:
   stage: quality
   script:
@@ -41,7 +38,6 @@ sonarcloud-check:
     - main
     - merge_requests
 
-# ===== PACKAGE: build the JAR =====
 package-jar:
   stage: package
   script:
@@ -52,7 +48,7 @@ package-jar:
     expire_in: 1 hour
   only:
     - main
-# ===== PUBLISH: build Docker image + push to ECR =====
+
 publish-image:
   stage: publish
   image: ubuntu:24.04
@@ -66,6 +62,13 @@ publish-image:
   before_script:
     - apt-get update -qq
     - apt-get install -qq -y curl unzip ca-certificates gnupg
+    # Attendre Docker
+    - |
+      for i in {1..30}; do
+        docker ps > /dev/null 2>&1 && break
+        echo "Waiting for Docker daemon... ($i/30)"
+        sleep 1
+      done
     # AWS CLI v2
     - curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
     - unzip -q awscliv2.zip
@@ -92,13 +95,11 @@ publish-image:
   only:
     - main
 
-# ===== DEPLOY TO EKS =====
 deploy-eks:
   stage: deploy
-  image: ubuntu:24.04
+  image: alpine:3.20  # ✅ CHANGÉ : Alpine au lieu d'Ubuntu
   before_script:
-    - apt-get update -qq
-    - apt-get install -qq -y curl unzip ca-certificates
+    - apk add --no-cache curl unzip ca-certificates
     - curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
     - unzip -q awscliv2.zip
     - ./aws/install
