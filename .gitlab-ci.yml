@@ -5,6 +5,7 @@ stages:
   - test
   - quality
   - package
+  - publish
   - deploy
 
 variables:
@@ -23,29 +24,38 @@ cache:
 build-job:
   stage: build
   script:
-    - echo "Compiling the project..."
     - mvn clean compile -B
 
 # ===== UNIT TESTS =====
 unit-test-job:
   stage: test
   script:
-    - echo "Running unit tests..."
     - mvn test -B
 
 # ===== SONARCLOUD =====
 sonarcloud-check:
   stage: quality
   script:
-    - echo "Running SonarCloud analysis..."
     - mvn verify sonar:sonar -B -DskipTests -DskipITs
   only:
     - main
     - merge_requests
 
-# ===== PACKAGE (build JAR + Docker image + push to ECR) =====
-package-and-push:
+# ===== PACKAGE: build the JAR =====
+package-jar:
   stage: package
+  script:
+    - mvn clean package -DskipTests -DskipITs -B -pl catalogue-service
+  artifacts:
+    paths:
+      - catalogue-service/target/*.jar
+    expire_in: 1 hour
+  only:
+    - main
+
+# ===== PUBLISH: build Docker image + push to ECR =====
+publish-image:
+  stage: publish
   image: docker:27
   services:
     - docker:27-dind
@@ -55,19 +65,18 @@ package-and-push:
     DOCKER_CERT_PATH: "/certs/client"
     DOCKER_TLS_VERIFY: "1"
   before_script:
-    - apk add --no-cache aws-cli maven openjdk21
+    - apk add --no-cache python3 py3-pip
+    - pip install --break-system-packages awscli
   script:
-    - echo "Building application JAR..."
-    - mvn clean package -DskipTests -DskipITs -B -pl catalogue-service
-
-    - echo "Authenticating to AWS ECR..."
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
-
-    - echo "Building Docker image for linux/amd64..."
     - docker buildx create --use --name builder || true
-    - docker buildx build --platform linux/amd64 -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG -t $ECR_REGISTRY/$IMAGE_NAME:latest -f catalogue-service/Dockerfile --push .
-
-    - echo "Image pushed to ECR with tags $IMAGE_TAG and latest"
+    - docker buildx build --platform linux/amd64
+      -t $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+      -t $ECR_REGISTRY/$IMAGE_NAME:latest
+      -f catalogue-service/Dockerfile
+      --push .
+  dependencies:
+    - package-jar
   only:
     - main
 
@@ -76,16 +85,14 @@ deploy-eks:
   stage: deploy
   image: alpine:3.20
   before_script:
-    - apk add --no-cache curl aws-cli
+    - apk add --no-cache curl python3 py3-pip
+    - pip install --break-system-packages awscli
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - aws eks update-kubeconfig --region $AWS_REGION --name yanashop-eks
   script:
-    - echo "Deploying image $ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG to EKS..."
     - kubectl set image deployment/catalogue-service catalogue-service=$ECR_REGISTRY/$IMAGE_NAME:$IMAGE_TAG -n yanashop
-    - echo "Waiting for rollout to complete..."
     - kubectl rollout status deployment/catalogue-service -n yanashop --timeout=5m
-    - echo "Deployment successful!"
   only:
     - main
   when: manual
