@@ -52,11 +52,10 @@ package-jar:
     expire_in: 1 hour
   only:
     - main
-
 # ===== PUBLISH: build Docker image + push to ECR =====
 publish-image:
   stage: publish
-  image: docker:27
+  image: ubuntu:24.04
   services:
     - docker:27-dind
   variables:
@@ -65,8 +64,21 @@ publish-image:
     DOCKER_CERT_PATH: "/certs/client"
     DOCKER_TLS_VERIFY: "1"
   before_script:
-    - apk add --no-cache aws-cli
+    - apt-get update -qq
+    - apt-get install -qq -y curl unzip ca-certificates gnupg
+    # AWS CLI v2
+    - curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+    - unzip -q awscliv2.zip
+    - ./aws/install
     - aws --version
+    # Docker CLI
+    - install -m 0755 -d /etc/apt/keyrings
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    - chmod a+r /etc/apt/keyrings/docker.gpg
+    - echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
+    - apt-get update -qq
+    - apt-get install -qq -y docker-ce-cli docker-buildx-plugin
+    - docker --version
   script:
     - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
     - docker buildx create --use --name builder || true
@@ -83,9 +95,13 @@ publish-image:
 # ===== DEPLOY TO EKS =====
 deploy-eks:
   stage: deploy
-  image: alpine:3.20
+  image: ubuntu:24.04
   before_script:
-    - apk add --no-cache aws-cli curl
+    - apt-get update -qq
+    - apt-get install -qq -y curl unzip ca-certificates
+    - curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+    - unzip -q awscliv2.zip
+    - ./aws/install
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - aws eks update-kubeconfig --region $AWS_REGION --name yanashop-eks
