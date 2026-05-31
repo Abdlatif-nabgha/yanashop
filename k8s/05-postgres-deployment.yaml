@@ -48,6 +48,5 @@ spec:
             periodSeconds: 10
       volumes:
         - name: postgres-storage
-          hostPath:
-            path: /data/postgres
-            type: DirectoryOrCreate
+          persistentVolumeClaim:
+            claimName: postgres-pvc
